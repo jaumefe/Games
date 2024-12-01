@@ -4,7 +4,10 @@ go 1.22.0
 
 toolchain go1.22.9
 
-require github.com/hajimehoshi/ebiten/v2 v2.8.4
+require (
+	github.com/hajimehoshi/ebiten/v2 v2.8.4
+	github.com/jaumefe/stats v0.0.0-20241201161016-16ba16388c7e
+)
 
 require (
 	github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325 // indirect
