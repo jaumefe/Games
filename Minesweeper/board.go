@@ -24,7 +24,11 @@ func (b *Board) Grid(board *ebiten.Image) {
 			y0 := t.y0
 			x1 := x0 + maxTileSize
 			y1 := y0 + maxTileSize
-			vector.DrawFilledRect(board, x0, y0, maxTileSize, maxTileSize, color.RGBA{R: 120, G: 120, B: 120, A: 255}, false)
+			colors := color.RGBA{R: 120, G: 120, B: 120, A: 255}
+			if t.isMine {
+				colors = color.RGBA{R: 255, G: 0, B: 0, A: 255}
+			}
+			vector.DrawFilledRect(board, x0, y0, maxTileSize, maxTileSize, colors, false)
 			vector.StrokeLine(board, x0, y0, x1, y0, float32(1), color.Black, false)
 			vector.StrokeLine(board, x0, y0, x0, y1, float32(1), color.Black, false)
 		}
@@ -54,11 +58,7 @@ func (b *Board) CursorPositionToRowAndCol(x, y int) (row, col int) {
 
 func (b *Board) MineDistributionAfterFirstClick(row, col int) {
 	length := b.rows * b.cols
-	tilesIndArr := make([]int, 0, length)
-
-	for i := 0; i < length; i++ {
-		tilesIndArr = append(tilesIndArr, i)
-	}
+	tilesArr := make([]any, 0, length)
 
 	excludeIndex := make(map[int]bool, 0)
 	// Initial tile
@@ -89,13 +89,26 @@ func (b *Board) MineDistributionAfterFirstClick(row, col int) {
 		excludeIndex[b.RowAndColToSingleArray(row, col+1)] = true
 	}
 
+	nb := 0
+	for r := 0; r < b.rows; r++ {
+		for c := 0; c < b.cols; c++ {
+			if nb < b.bombs {
+				if !excludeIndex[b.RowAndColToSingleArray(r, c)] {
+					b.tiles[r][c].isMine = true
+					nb++
+				}
+			}
+			tilesArr = append(tilesArr, b.tiles[r][c])
+		}
+	}
+
 	fmt.Println(excludeIndex)
 
 	fmt.Println("Before flushing")
-	fmt.Println(tilesIndArr)
-	stats.FihserYatesShuffleWithExclusion(tilesIndArr, excludeIndex)
+	fmt.Println(tilesArr)
+	stats.FisherYatesShuffleWithExclusion(tilesArr, excludeIndex)
 	fmt.Println("After flushing")
-	fmt.Println(tilesIndArr)
+	fmt.Println(tilesArr)
 }
 
 func (b *Board) RowAndColToSingleArray(row, col int) int {
