@@ -25,7 +25,7 @@ func (t *tile) SetTileColor() {
 		case 2:
 			t.colors = green
 		case 3:
-			t.colors = red
+			t.colors = darkRed
 		case 4:
 			t.colors = darkBlue
 		case 5:
@@ -40,7 +40,7 @@ func (t *tile) SetTileColor() {
 			t.colors = clicked
 		}
 	}
-	if t.isMine {
+	if t.isMine && t.isClicked {
 		t.colors = red
 	}
 }

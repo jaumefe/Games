@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
 	"strconv"
 	"time"
@@ -24,6 +25,7 @@ type coord struct {
 }
 
 func (b *Board) Grid(board *ebiten.Image) {
+	vector.DrawFilledRect(board, 0, 0, screenWidthMax, screenHeightMax, color.RGBA{R: 80, G: 80, B: 80, A: 0}, false)
 	for r := range b.rows {
 		for c := range b.cols {
 			idx := RowAndColToSingleArray(r, c, b.cols)
@@ -36,9 +38,10 @@ func (b *Board) Grid(board *ebiten.Image) {
 			vector.DrawFilledRect(board, x0, y0, maxTileSize, maxTileSize, b.tiles[idx].colors, false)
 			vector.StrokeLine(board, x0, y0, x1, y0, float32(1), color.Black, false)
 			vector.StrokeLine(board, x0, y0, x0, y1, float32(1), color.Black, false)
+			vector.StrokeLine(board, x1, y0, x1, y1, float32(1), color.Black, false)
+			vector.StrokeLine(board, x0, y1, x1, y1, float32(1), color.Black, false)
 		}
 	}
-
 }
 
 func (b *Board) Init(rows, cols, bombs int) {
@@ -131,6 +134,7 @@ func (b *Board) NoMinesAutoShower(idx int, exclude map[int]bool) {
 	for n := range neighbors {
 		if !exclude[n] && !b.tiles[n].isMine {
 			b.tiles[n].isClicked = true
+			b.tiles[n].flag = false
 			if b.tiles[n].nbhdMines == 0 {
 				exclude[n] = true
 				b.NoMinesAutoShower(n, exclude)
@@ -140,7 +144,37 @@ func (b *Board) NoMinesAutoShower(idx int, exclude map[int]bool) {
 }
 
 func (b *Board) DrawFlag(board *ebiten.Image) {
-	vector.StrokeLine(board, 10, 45, 45, 45, 5, color.Black, false)
-	vector.StrokeLine(board, 27.5, 45, 27.5, 10, 5, color.Black, false)
-	vector.DrawFilledRect(board, 10, 10, 19, 17.5, color.RGBA{R: 255, A: 255}, false)
+	for x := 0; x < len(b.coord); x++ {
+		for y := 0; y < len(b.coord[x]); y++ {
+			idx := RowAndColToSingleArray(x, y, b.cols)
+			if b.tiles[idx].flag {
+				x0, y0 := b.coord[x][y].x0, b.coord[x][y].y0
+				vector.StrokeLine(board, float32(x0+10), float32(y0+45), float32(x0+45), float32(y0+45), 5, color.Black, false)
+				vector.StrokeLine(board, float32(x0)+27.5, float32(y0+45), float32(x0)+27.5, float32(y0+10), 5, color.Black, false)
+				vector.DrawFilledRect(board, float32(x0+10), float32(y0+10), 19, 17.5, color.RGBA{R: 255, A: 255}, false)
+			}
+		}
+	}
+
+}
+
+func (b *Board) ShowTotalFlags(screen *ebiten.Image) {
+	msg := fmt.Sprintf("%02d/%d", totalFlags, b.bombs)
+	opts := &text.DrawOptions{}
+	opts.GeoM.Translate(screenWidthMax-100, 50)
+	text.Draw(screen, msg, counterFont.txt, opts)
+}
+
+func (b *Board) PlotMines(screen *ebiten.Image) {
+	for x := 0; x < len(b.coord); x++ {
+		for y := 0; y < len(b.coord[x]); y++ {
+			idx := RowAndColToSingleArray(x, y, b.cols)
+			if b.tiles[idx].isMine && !b.tiles[idx].flag {
+				x0, y0 := b.coord[x][y].x0, b.coord[x][y].y0
+				vector.DrawFilledCircle(screen, x0+maxTileSize/2, y0+maxTileSize/2, 15, color.RGBA{R: 0, G: 0, B: 0, A: 255}, false)
+				vector.StrokeLine(screen, x0+5, y0+maxTileSize/2, x0+50, y0+maxTileSize/2, 5, color.RGBA{R: 0, G: 0, B: 0, A: 255}, false)
+				vector.StrokeLine(screen, x0+maxTileSize/2, y0+5, x0+maxTileSize/2, y0+50, 5, color.RGBA{R: 0, G: 0, B: 0, A: 255}, false)
+			}
+		}
+	}
 }
