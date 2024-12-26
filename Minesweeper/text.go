@@ -35,6 +35,17 @@ var (
 	red        = color.RGBA{R: 255, G: 0, B: 0, A: 255}
 )
 
+type message struct {
+	title    string
+	subtitle string
+}
+
+type msgOpts struct {
+	font                   fontFace
+	marginX, marginY       float32
+	subMarginX, subMarginY float32
+}
+
 func (ff *fontFace) Init(tt *sfnt.Font, optsff *optsFontFace) error {
 	var err error
 	opts := &opentype.FaceOptions{
