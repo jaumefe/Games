@@ -1,9 +1,7 @@
 package main
 
 import (
-	_ "embed"
 	"fmt"
-	_ "image/png"
 	"log"
 	"time"
 
@@ -11,11 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"golang.org/x/image/font/opentype"
 )
-
-//go:embed assets/Roboto-Regular.ttf
-var robotTFF []byte
 
 const (
 	screenWidthMax  = 1840
@@ -46,6 +40,7 @@ type button struct {
 var bEasy = button{x0: 420, y0: screenHeightMax/2 - 200/2, width: 300, height: 200}
 var bMedium = button{x0: 770, y0: screenHeightMax/2 - 200/2, width: 300, height: 200}
 var bHard = button{x0: 1120, y0: screenHeightMax/2 - 200/2, width: 300, height: 200}
+var bReset = button{x0: screenWidthMax - 170, y0: screenHeightMax - 300, width: 150, height: 100}
 
 func RowAndColToSingleArray(row, col, totalCols int) int {
 	return col + row*totalCols
@@ -58,6 +53,7 @@ func SingleArrayToRowAndCol(idx, totalCols int) (row, col int) {
 }
 
 func (g *Game) Update() error {
+	// Initializating the game
 	if g.reset {
 		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 			x, y := ebiten.CursorPosition()
@@ -74,6 +70,21 @@ func (g *Game) Update() error {
 		}
 		return nil
 	}
+
+	// Reset button logic
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		x, y := ebiten.CursorPosition()
+		if x > bReset.x0 && x < bReset.x0+bReset.width && y > bReset.y0 && y < bReset.y0+bReset.height {
+			g.reset = true
+			g.diff = ""
+			initialClick = true
+			minutes, seconds = 0, 0
+			totalFlags = 0
+			return nil
+		}
+	}
+
+	// Game logic
 	if !g.gameOver.Win && !g.gameOver.Lose {
 		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 			row, col := g.brd.CursorPositionToRowAndCol(ebiten.CursorPosition())
@@ -136,6 +147,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		if g.gameOver.Lose {
 			g.brd.PlotMines(screen)
 		}
+		g.ResetButton(screen)
 	} else {
 		g.DifficultySelector(screen)
 	}
@@ -144,7 +156,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 func printTime(screen *ebiten.Image) {
 	timeStr := fmt.Sprintf("%02d:%02d", minutes, seconds)
 	opts := &text.DrawOptions{}
-	opts.GeoM.Translate(screenWidthMax-100, 100)
+	opts.GeoM.Translate(screenWidthMax-125, 100)
 	text.Draw(screen, timeStr, counterFont.txt, opts)
 }
 
@@ -206,6 +218,16 @@ func (g *Game) DifficultySelector(screen *ebiten.Image) {
 	drawButton(screen, float32(bHard.x0), float32(bHard.y0), float32(bHard.width), float32(bHard.height), msg, &opts)
 }
 
+func (g *Game) ResetButton(screen *ebiten.Image) {
+	var msg message
+	var opts msgOpts
+	msg.title = "New game"
+	opts.font = counterFont
+	opts.marginX = 50
+	opts.marginY = float32(bReset.height)/2 - 35
+	drawButton(screen, float32(bReset.x0), float32(bReset.y0), float32(bReset.width), float32(bReset.height), msg, &opts)
+}
+
 func drawButton(screen *ebiten.Image, x0, y0, width, height float32, msg message, mOpts *msgOpts) {
 	var lineWidth float32 = 5
 	marginX, marginY := mOpts.marginX, mOpts.marginY
@@ -246,30 +268,6 @@ func drawButton(screen *ebiten.Image, x0, y0, width, height float32, msg message
 		opts.ColorScale.SetB(0)
 		text.Draw(screen, txt, font.txt, opts)
 	}
-}
-
-func LoadFont() error {
-	tt, err := opentype.Parse(robotTFF)
-	if err != nil {
-		return fmt.Errorf("failed to parse font: %v", err)
-	}
-
-	mineFontOpts := &optsFontFace{
-		size: 50,
-		dpi:  72,
-	}
-	if err := minesFont.Init(tt, mineFontOpts); err != nil {
-		return fmt.Errorf("failed to init font of mines text: %v", err)
-	}
-
-	counterFontOpts := &optsFontFace{
-		size: 32,
-		dpi:  48,
-	}
-	if err := counterFont.Init(tt, counterFontOpts); err != nil {
-		return fmt.Errorf("failed to init font of mines text: %v", err)
-	}
-	return nil
 }
 
 func main() {

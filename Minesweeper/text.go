@@ -1,6 +1,8 @@
 package main
 
 import (
+	_ "embed"
+	"fmt"
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
@@ -8,6 +10,9 @@ import (
 	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/font/sfnt"
 )
+
+//go:embed assets/Roboto-Regular.ttf
+var robotTFF []byte
 
 type fontFace struct {
 	face font.Face
@@ -44,6 +49,30 @@ type msgOpts struct {
 	font                   fontFace
 	marginX, marginY       float32
 	subMarginX, subMarginY float32
+}
+
+func LoadFont() error {
+	tt, err := opentype.Parse(robotTFF)
+	if err != nil {
+		return fmt.Errorf("failed to parse font: %v", err)
+	}
+
+	mineFontOpts := &optsFontFace{
+		size: 50,
+		dpi:  72,
+	}
+	if err := minesFont.Init(tt, mineFontOpts); err != nil {
+		return fmt.Errorf("failed to init font of mines text: %v", err)
+	}
+
+	counterFontOpts := &optsFontFace{
+		size: 32,
+		dpi:  48,
+	}
+	if err := counterFont.Init(tt, counterFontOpts); err != nil {
+		return fmt.Errorf("failed to init font of mines text: %v", err)
+	}
+	return nil
 }
 
 func (ff *fontFace) Init(tt *sfnt.Font, optsff *optsFontFace) error {

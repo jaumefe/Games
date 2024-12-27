@@ -161,7 +161,7 @@ func (b *Board) DrawFlag(board *ebiten.Image) {
 func (b *Board) ShowTotalFlags(screen *ebiten.Image) {
 	msg := fmt.Sprintf("%02d/%d", totalFlags, b.bombs)
 	opts := &text.DrawOptions{}
-	opts.GeoM.Translate(screenWidthMax-100, 50)
+	opts.GeoM.Translate(screenWidthMax-125, 50)
 	text.Draw(screen, msg, counterFont.txt, opts)
 }
 
