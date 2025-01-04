@@ -15,29 +15,26 @@ const (
 
 var initialClick = true
 var startTime time.Time
-var minutes, seconds = 0, 0
 var totalFlags = 0
+var playerName []rune
+var Name string
+var popUp = false
+
+var duration Duration = Duration{Minutes: 0, Seconds: 0}
 
 type Game struct {
 	brd      Board
 	diff     string
 	gameOver gameover
 	reset    bool
+	records  bool
 }
 
 func (g *Game) Update() error {
 	// Initializating the game
 	if g.reset {
-		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-			x, y := ebiten.CursorPosition()
-			if x > bEasy.x0 && x < bEasy.x0+bEasy.width && y > bEasy.y0 && y < bEasy.y0+bEasy.height {
-				g.diff = "easy"
-			} else if x > bMedium.x0 && x < bMedium.x0+bMedium.width && y > bMedium.y0 && y < bMedium.y0+bMedium.height {
-				g.diff = "medium"
-			} else if x > bHard.x0 && x < bHard.x0+bHard.width && y > bHard.y0 && y < bHard.y0+bHard.height {
-				g.diff = "hard"
-			}
-		}
+		g.LogicDifficultySelector()
+
 		if g.diff != "" {
 			g.Init()
 		}
@@ -48,19 +45,13 @@ func (g *Game) Update() error {
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		x, y := ebiten.CursorPosition()
 		if x > bReset.x0 && x < bReset.x0+bReset.width && y > bReset.y0 && y < bReset.y0+bReset.height {
-			g.reset = true
-			g.diff = ""
-			initialClick = true
-			minutes, seconds = 0, 0
-			totalFlags = 0
-			g.gameOver.Win = false
-			g.gameOver.Lose = false
+			g.Reset()
 			return nil
 		}
 	}
 
 	// Game logic
-	if !g.gameOver.Win && !g.gameOver.Lose {
+	if !g.gameOver.Ended {
 		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 			row, col := g.brd.CursorPositionToRowAndCol(ebiten.CursorPosition())
 			if row < g.brd.rows && col < g.brd.cols {
@@ -80,6 +71,8 @@ func (g *Game) Update() error {
 					g.brd.tiles[idx].isClicked = true
 					if g.brd.tiles[idx].isMine {
 						g.gameOver.Lose = true
+						g.gameOver.Ended = true
+						g.records = true
 					}
 				}
 
@@ -98,14 +91,80 @@ func (g *Game) Update() error {
 				}
 			}
 		}
-		duration := time.Since(startTime)
+		duration.Raw = time.Since(startTime)
 
 		if !initialClick {
-			minutes = int(duration.Minutes())
-			seconds = int(duration.Seconds()) % 60
+			duration.Minutes = int(duration.Raw.Minutes())
+			duration.Seconds = int(duration.Raw.Seconds()) % 60
+		}
+
+	} else {
+		if g.records {
+			db, err := OpenDB()
+			if err != nil {
+				return err
+			}
+
+			// Save information on database
+			if g.gameOver.Win {
+				if popUp {
+					// Getting the name of the player
+					playerName = ebiten.AppendInputChars(playerName[:0])
+
+					for _, r := range playerName {
+						// Limiting the name to 10 characters
+						if len(Name) < 10 {
+							Name += string(r)
+						}
+					}
+					// Delete character (backspace)
+					if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) && len(Name) > 0 {
+						Name = Name[:len(Name)-1]
+					}
+
+					// Confirm player name (Enter)
+					if inpututil.IsKeyJustPressed(ebiten.KeyEnter) && len(Name) > 0 {
+						popUp = false
+					}
+
+					if !popUp {
+						err := SaveBestTime(g, Name, duration, db)
+						if err != nil {
+							return err
+						}
+
+						err = SaveStats(g, db, true)
+						if err != nil {
+							return err
+						}
+						g.records = false
+					}
+				}
+
+			} else if g.gameOver.Lose {
+				err := SaveStats(g, db, false)
+				if err != nil {
+					return err
+				}
+				g.records = false
+			}
+
+			if err := CloseDB(db); err != nil {
+				return err
+			}
+
 		}
 	}
-	g.gameOver.Win = g.checkIfEndGame()
+
+	if !g.gameOver.Ended {
+		g.gameOver.Win = g.checkIfEndGame()
+		if g.gameOver.Win {
+			popUp = true
+			g.gameOver.Ended = true
+			g.records = true
+		}
+	}
+
 	return nil
 }
 

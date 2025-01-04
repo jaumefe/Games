@@ -4,13 +4,15 @@ import (
 	"fmt"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 type gameover struct {
-	Win  bool
-	Lose bool
+	Win   bool
+	Lose  bool
+	Ended bool
 }
 
 type button struct {
@@ -33,7 +35,7 @@ func SingleArrayToRowAndCol(idx, totalCols int) (row, col int) {
 }
 
 func printTime(screen *ebiten.Image) {
-	timeStr := fmt.Sprintf("%02d:%02d", minutes, seconds)
+	timeStr := fmt.Sprintf("%02d:%02d", duration.Minutes, duration.Seconds)
 	opts := &text.DrawOptions{}
 	opts.GeoM.Translate(screenWidthMax-125, 100)
 	text.Draw(screen, timeStr, counterFont.txt, opts)
@@ -59,6 +61,7 @@ func (g *Game) Init() {
 	g.brd.Init(rows, cols, bombs)
 
 	g.reset = false
+	g.records = false
 }
 
 func (g *Game) checkIfEndGame() bool {
@@ -142,5 +145,32 @@ func drawButton(screen *ebiten.Image, x0, y0, width, height float32, msg message
 		opts.ColorScale.SetG(0)
 		opts.ColorScale.SetB(0)
 		text.Draw(screen, txt, font.txt, opts)
+	}
+}
+
+func (g *Game) Reset() {
+	g.reset = true
+	g.diff = ""
+	initialClick = true
+	totalFlags = 0
+	duration = Duration{Minutes: 0, Seconds: 0}
+	g.gameOver.Win = false
+	g.gameOver.Lose = false
+	g.gameOver.Ended = false
+	playerName = nil
+	g.records = false
+	Name = ""
+}
+
+func (g *Game) LogicDifficultySelector() {
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		x, y := ebiten.CursorPosition()
+		if x > bEasy.x0 && x < bEasy.x0+bEasy.width && y > bEasy.y0 && y < bEasy.y0+bEasy.height {
+			g.diff = "easy"
+		} else if x > bMedium.x0 && x < bMedium.x0+bMedium.width && y > bMedium.y0 && y < bMedium.y0+bMedium.height {
+			g.diff = "medium"
+		} else if x > bHard.x0 && x < bHard.x0+bHard.width && y > bHard.y0 && y < bHard.y0+bHard.height {
+			g.diff = "hard"
+		}
 	}
 }

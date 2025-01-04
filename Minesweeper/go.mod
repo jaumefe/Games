@@ -7,10 +7,9 @@ toolchain go1.22.9
 require (
 	github.com/hajimehoshi/ebiten/v2 v2.8.5
 	github.com/jaumefe/stats v0.0.3
+	github.com/mattn/go-sqlite3 v1.14.24
 	golang.org/x/image v0.23.0
 )
-
-//replace github.com/jaumefe/stats => /home/jaume/Documents/Programming/Go_Packages/Stats
 
 require (
 	github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325 // indirect
