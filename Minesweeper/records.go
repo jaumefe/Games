@@ -13,8 +13,10 @@ type Duration struct {
 	Raw     time.Duration
 }
 
+var dBPath = "assets/records.db"
+
 func OpenDB() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "assets/records_dev.db")
+	db, err := sql.Open("sqlite3", dBPath)
 	if err != nil {
 		return nil, err
 	}
@@ -96,4 +98,56 @@ func SaveStats(g *Game, db *sql.DB, win bool) error {
 
 	return nil
 
+}
+
+func QueryBestTimes(db *sql.DB, diff int) ([]bestTimes, error) {
+	res, err := db.Query("SELECT player_name, time, timestamp FROM best_times WHERE difficulty_id = ? ORDER BY time ASC LIMIT 10", diff)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Close()
+
+	bts := make([]bestTimes, 10)
+	i := 0
+	for res.Next() {
+		var timeTemp float64
+		var timeStampTemp string
+		err = res.Scan(&bts[i].PlayerName, &timeTemp, &timeStampTemp)
+		if err != nil {
+			return nil, err
+		}
+		bts[i].Time.Raw = time.Duration(timeTemp)
+		bts[i].Time.Minutes = int(bts[i].Time.Raw.Minutes())
+		bts[i].Time.Seconds = int(bts[i].Time.Raw.Seconds()) % 60
+		bts[i].Timestamp, err = time.Parse("2006-01-02 15:04:05.999999999-07:00", timeStampTemp)
+		if err != nil {
+			return nil, err
+		}
+		i++
+	}
+
+	return bts, nil
+}
+
+type bestTimes struct {
+	PlayerName string
+	Time       Duration
+	Timestamp  time.Time
+}
+
+func QueryStats(db *sql.DB, diff int) (won, played int, err error) {
+	res, err := db.Query("SELECT wins, played FROM stats WHERE difficulty_id = ?", diff)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer res.Close()
+
+	for res.Next() {
+		err = res.Scan(&won, &played)
+		if err != nil {
+			return 0, 0, err
+		}
+	}
+
+	return
 }

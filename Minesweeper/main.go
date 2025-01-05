@@ -181,6 +181,15 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		if g.gameOver.Lose {
 			g.brd.PlotMines(screen)
 		}
+
+		if g.gameOver.Ended {
+			if g.gameOver.Win && g.records {
+				g.NamePopUp(screen)
+			} else if !g.records {
+				g.ShowStats(screen)
+			}
+		}
+
 		g.ResetButton(screen)
 	} else {
 		g.DifficultySelector(screen)

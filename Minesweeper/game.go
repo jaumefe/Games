@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"image/color"
+	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -173,4 +175,87 @@ func (g *Game) LogicDifficultySelector() {
 			g.diff = "hard"
 		}
 	}
+}
+
+func (g *Game) NamePopUp(screen *ebiten.Image) {
+	popupWidth, popupHeight := 300, 150
+
+	popup := ebiten.NewImage(popupWidth, popupHeight)
+	popup.Fill(color.RGBA{50, 50, 50, 255})
+
+	txt := "Enter your name: " + Name
+	opts := &text.DrawOptions{}
+	opts.ColorScale.SetR(255)
+	opts.ColorScale.SetG(255)
+	opts.ColorScale.SetB(255)
+	opts.ColorScale.SetA(255)
+	opts.GeoM.Translate(10, float64(popupHeight)/2-counterFont.txt.Metrics().HAscent/2)
+	text.Draw(popup, txt, counterFont.txt, opts)
+
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(screenWidthMax/2-float64(popupWidth)/2, screenHeightMax/2-float64(popupHeight)/2)
+	screen.DrawImage(popup, op)
+
+}
+
+func (g *Game) ShowStats(screen *ebiten.Image) {
+	popupWidth, popupHeight := 500, 300
+	popup := ebiten.NewImage(popupWidth, popupHeight)
+	popup.Fill(color.RGBA{100, 100, 100, 255})
+
+	db, err := OpenDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer CloseDB(db)
+
+	diff, err := DiffStringToId(g, db)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	bts, err := QueryBestTimes(db, diff)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(screenWidthMax/2-float64(popupWidth)/2, screenHeightMax/2-float64(popupHeight)/2)
+
+	for i := 0; i < len(bts); i++ {
+		txt := fmt.Sprintf("%d.", i+1)
+		opts := &text.DrawOptions{}
+		opts.ColorScale.SetR(0)
+		opts.ColorScale.SetG(0)
+		opts.ColorScale.SetB(0)
+		opts.ColorScale.SetA(255)
+		opts.GeoM.Translate(50, 25+float64(i)*20)
+		text.Draw(popup, txt, counterFont.txt, opts)
+
+		txt = bts[i].PlayerName
+		opts.GeoM.Translate(100, 0)
+		text.Draw(popup, txt, counterFont.txt, opts)
+
+		txt = fmt.Sprintf("%02d:%02d", bts[i].Time.Minutes, bts[i].Time.Seconds)
+		opts.GeoM.Translate(200, 0)
+		text.Draw(popup, txt, counterFont.txt, opts)
+	}
+
+	won, played, err := QueryStats(db, diff)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	percentage := float32(won) / float32(played) * 100
+	txt := fmt.Sprintf("Games won: %d/%d (%.2f%%)", won, played, percentage)
+	opts := &text.DrawOptions{}
+	opts.ColorScale.SetR(0)
+	opts.ColorScale.SetG(0)
+	opts.ColorScale.SetB(0)
+	opts.ColorScale.SetA(255)
+	opts.GeoM.Translate(50, 250)
+	text.Draw(popup, txt, counterFont.txt, opts)
+
+	screen.DrawImage(popup, op)
+
 }
